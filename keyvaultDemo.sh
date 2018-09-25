@@ -1,6 +1,21 @@
 #!/bin/bash
 
 ## DESCRIPTION: Simple demonstration of Azure Key Vualt and CMK for Azure Storage 
+## This script:
+
+## PART 1 - Enables CMK on a Storage Account
+## 1.) Creates a resource group
+## 2.) Creates a KeyVault to hold a CMK for an Azure Storage Accout
+## 3.) Creates a key in the KeyVaule
+## 4.) Creates a Storage Account with MSI
+## 5.) Creates a KeyVault Policy for the above Vault allowing the MSI from the storage account access
+## 6.) Enables CMK on the Storage account
+
+## Part 2 - Creates a VM that has access to a KeyVault Key
+## 7.) Creates a VNet and a Subnet
+## 8.) Enables the VNet Endpoint for KeyVault on the subnet
+## 9.) Sets the firewall up on the KeyVault so that only the subnet can access it.
+
 
 # echo on
 set -o xtrace
