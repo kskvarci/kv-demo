@@ -45,7 +45,7 @@ The script is broken into two main sections as noted above:
 5. Create two Ubuntu VMs assigning them both to the same above created User-Assigned Managed Identity. The VMs have custom data attached that configures the VMs with a simple python test app to test access to the Key Vault after provisioned.
 6. Create a second Key Vault to hold application related keys. (The first vault was for the CMK only)
 7. Create a new key within the second Key Vault to hold a key to be used for encryption by an application.
-8. Create a Key Vault Policy on the second Key Vault to allow the VMs running under the shared User-Assigend Managed Identity to access keys within the vault.
+8. Create a Key Vault Policy on the second Key Vault to allow the VMs running under the shared User-Assigned Managed Identity to access keys within the vault.
 9. Add Network rules to the firewall on the Azure Storage Account and Key Vaults to allow access only from the Subnet
 
 ## Testing Post Deployment
