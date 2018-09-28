@@ -18,13 +18,14 @@ set -o xtrace
 
 # Before running plug in your subscription ID and public SSH key.
 subscriptionID="<subscription_id>"
+sshPubKey="<ssh_public_key>"
 resourceGroupName="KeyVaultDemo-Rg"
 location="eastus2"
 baseResourceName="kvdemo"
 # Random string for naming to avoid name collisions
 rand=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 6 | head -n 1)
 vmUserName="azadmin"
-sshPubKey="<ssh_public_key>"
+
 
 # List available subscriptions
 az account list -o table
@@ -41,16 +42,20 @@ az group create --name $resourceGroupName --location $location
 # Create a Key Vault w/ soft delete and purge protection enabled (both required for CMK)
 # These two options prevent the accidental destruction of the vault and key material both of which would make data encrypted using a CMK unreadable.
 # Key backups are recommended.
-az keyvault create --name "$rand$baseResourceName-keyvault" --enable-soft-delete true --enable-purge-protection true --location $location --resource-group $resourceGroupName
+az keyvault create --name "$rand$baseResourceName-keyvault" --enable-soft-delete true --enable-purge-protection true --location $location --resource-group $resourceGroupName --sku premium
 
-# Create a key in the new vault. This key will be used as a master key to encrypt downstream account and data keys used for data encryption in the storage account.
-az keyvault key create --name "cmk1" --vault-name "$rand$baseResourceName-keyvault" --kty RSA 
+# Create an HSM backed key in the new vault. This key will be used as a master key to encrypt downstream account and data keys used for data encryption in the storage account.
+az keyvault key create --name "cmk1" --vault-name "$rand$baseResourceName-keyvault" --kty RSA-HSM
 
 # Retrieve the current version of the newly created key. We'll need it when we turn CMK on on the storage account.
 encryptionKeyKID=$(az keyvault key show --vault-name "$rand$baseResourceName-keyvault" --name "cmk1" --query key.kid)
 # Pull the vestion from the KID and trim off the trailing quote.
 encryptionKeyVersion=${encryptionKeyKID##*/}
 encryptionKeyVersion=${encryptionKeyVersion%\"}
+
+# Backup the key for escrow and or recovery to other vaults
+mkdir key-backups
+az keyvault key backup --file ./key-backups/cmk1-backup --name "cmk1" --vault-name "$rand$baseResourceName-keyvault"
 
 # Create a storage account. make sure to create a system-assigned managed service identity (MSI) as part of the account creation process. This will be used to grant access to the key in keyvault.
 # Set the default firewall setting to deny
@@ -118,10 +123,13 @@ az vm create --name "$rand$baseResourceName-vm" --resource-group $resourceGroupN
 az vm create --name "$rand$baseResourceName-vm2" --resource-group $resourceGroupName --image UbuntuLTS --vnet-name "$rand$baseResourceName-vnet" --subnet "default" --ssh-key-value "$sshPubKey" --admin-username "$vmUserName" --custom-data customdata.sh --assign-identity $uamiID
 
 # Create a second new Key Vault to hold a key for encrypting data from an app on the VM
-az keyvault create --name "$rand$baseResourceName-keyvault2" --location $location --resource-group $resourceGroupName
+az keyvault create --name "$rand$baseResourceName-keyvault2" --location $location --resource-group $resourceGroupName --sku premium
 
-# Create a key in the vault. This key will be used to encrypt/decrypt data from code running on the VM
-az keyvault key create --name "appkey1" --vault-name "$rand$baseResourceName-keyvault2" --kty RSA 
+# Create an HSM backed key in the vault. This key will be used to encrypt/decrypt data from code running on the VM
+az keyvault key create --name "appkey1" --vault-name "$rand$baseResourceName-keyvault2" --kty RSA-HSM 
+
+# Backup the key for escrow and or recovery to other vaults
+az keyvault key backup --file ./key-backups/appkey1-backup --name "appkey1" --vault-name "$rand$baseResourceName-keyvault2"
 
 # Add a network ACL to the vault to allow access only from the above created subnet
 az keyvault network-rule add --name "$rand$baseResourceName-keyvault2" --resource-group $resourceGroupName --subnet "default" --vnet-name "$rand$baseResourceName-vnet"

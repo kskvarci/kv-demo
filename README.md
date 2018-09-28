@@ -105,8 +105,21 @@ Run the pl file by typing:
 ```sh
 python example.pl
 ```
-you should get back a JSON Web Key object from the Key Vault. This small script is using a token retrieved from the Managed Identity to call the Key Vault and retrieve the key. We didnt have to provide any credentials as  they were provided via the managed identity. Also be aware that we can only access this vault because this VM is running in a subnet that we have allowed. 
+You should get back a JSON Web Key object from the Key Vault. This small script is using a token retrieved from the Managed Identity to call the Key Vault and retrieve the key. We didnt have to provide any credentials as  they were provided via the managed identity. Also be aware that we can only access this vault because this VM is running in a subnet that we have allowed. 
 
 ```sh
 {'crv': None, 'key_ops': [u'encrypt', u'decrypt', u'sign', u'verify', u'wrapKey', u'unwrapKey'], 'e': '\x01\x00\x01', 'kty': u'RSA', 'k': None, 'n': '\xbd\xa1\xfe\xddy:\xda\xb0\xa3\x1e\xb3\xc8^T\xc4\x02\xa3\xec\xac\x0f\x14\xe6"nY.\x17(Q\x7f\xcb\x0b\xd7ZB\xb9\x02\x98[\x16\x95Zzr\x1c_\xad\x8f\xf2\xfd\xe5\xef\xbb\xe3ks\xf8\xfd\x95|\x1a\xd9\xc5\x8f\xd1\xed\xd9t]L\xe2-\x93\xba\xab\xfa\xe1TC\xad~c+\x8b\xbc\x7fg\x00\x9d}K\xac}j{\xf0L\xa7\xf1S \xf6\xee\xf0\xcf\x8b\xe0\x11\xaf\xe0.\x87\xdfQr\xdb"\xefx\x15F\xf9\xcc\x06\\\x83\xc7X\x99\xe9\xbf\x8e\xe7\xd5\x19M\x92.|x\xa0I@X\xf3m\x7f\xa7\xb4\x8e\x81U\xc1+\\\xe3\xa6\xe1\xbe \x0e\n]\xf7+\xb1\xad:\xfdA\xd9\xcb.\x87\t\xeb\x94\xef\x06=\x04\r\x05\x81\x9f\xadx5u\xc8\xdf\x1f\x12o\x19\xf8\x10*!\x16\xe1\xc7\xc7M\x0b\xfb\n\xb1v\xd1+\x95[>q\x04\xcb"\xb0\xfdG46\xaaQ(\x9f\\\xed\xe8\xfc]g2\x86Wx\xf8\xd9\x1a\xca\xe02\xec\xa1^\xd1u\xaed\xcc\x05u\xca\x8b\x19', 'q': None, 'p': None, 'additional_properties': {}, 't': None, 'kid': u'https://rlheulkvdemo-keyvault2.vault.azure.net/keys/appkey1/66f96e4342eb413f9c8ad08bd2190ae1', 'qi': None, 'x': None, 'dq': None, 'y': None, 'dp': None, 'd': None}
 ```
+When we ran the scripts to create the keys within both Key Vaults that we created we also backed the keys up to the client using the "az keyvault key backup" command. This command creates an encrypted backup of the key material (all versions) that can then be restored into the same or another keyvault within the same region.
+
+* Go into the portal and open the second keyvault (ending in -keyvault2)
+* Click on keys under Settings
+* Click on appkey1 in the listed keys
+* Delete the key using the delete button
+* Notice that the key material is completely deleted from the vault. Any data encrypted with this key would now be unreadable.
+* Restore the key from backup using the following command:
+
+```sh
+az keyvault key restore --file key-backups/appkey1-backup --vault-name <insert_vault_name_here>
+```
+* Notice that the key has been restored into the vault (all versions). 
